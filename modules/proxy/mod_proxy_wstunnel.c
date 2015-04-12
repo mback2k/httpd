@@ -268,6 +268,11 @@ static int ap_proxy_wstunnel_request(apr_pool_t *p, request_rec *r,
                          ap_log_rerror(APLOG_MARK, APLOG_NOTICE, 0, r, "AH02447: "
                                        "err/hup on backconn");
                 }
+                else { 
+                    rv = APR_EGENERAL;
+                    ap_log_rerror(APLOG_MARK, APLOG_NOTICE, 0, r, "AH02605: "
+                            "unknown event on backconn %d", pollevent);
+                }
                 if (rv != APR_SUCCESS)
                     client_error = 1;
             }
@@ -277,6 +282,18 @@ static int ap_proxy_wstunnel_request(apr_pool_t *p, request_rec *r,
                     ap_log_rerror(APLOG_MARK, APLOG_DEBUG, 0, r, "AH02448: "
                                   "client was readable");
                     rv = proxy_wstunnel_transfer(r, c, backconn, bb, "client");
+                }
+                else if ((pollevent & APR_POLLERR)
+                        || (pollevent & APR_POLLHUP)) {
+                    rv = APR_EPIPE;
+                    c->aborted = 1;
+                    ap_log_rerror(APLOG_MARK, APLOG_DEBUG, 0, r, "AH02607: "
+                            "err/hup on client conn");
+                }
+                else { 
+                    rv = APR_EGENERAL;
+                    ap_log_rerror(APLOG_MARK, APLOG_NOTICE, 0, r, "AH02606: "
+                            "unknown event on client conn %d", pollevent);
                 }
             }
             else {
